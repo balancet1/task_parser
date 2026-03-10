@@ -24,13 +24,8 @@ class TaskParser:
             return ""
     
     def parse_tasks(self, text: str) -> List[Dict]:
-        """Находит задачи в тексте"""
+        """Находит задачи в тексте (универсальный парсер)"""
         tasks = []
-        
-        # Паттерн для поиска задач:
-        # Номер задачи в начале строки (1., 2., и т.д.)
-        # Затем описание (может занимать несколько строк)
-        # Затем "Отв.:" и "Срок - ДД.ММ.ГГГГ"
         
         # Разбиваем текст на строки
         lines = text.split('\n')
@@ -68,30 +63,33 @@ class TaskParser:
                 current_description = [task_start]
             
             elif current_task:
-                # Проверяем, содержит ли строка информацию об ответственном и сроке
-                if 'Отв.:' in line and 'Срок -' in line:
-                    # Парсим ответственнного и дату
-                    resp_match = re.search(r'Отв\.:\s*([^С]+)', line)
-                    date_match = re.search(r'Срок\s*-\s*(\d{2}\.\d{2}\.\d{4})', line)
-                    
-                    if resp_match:
-                        current_task['responsible'] = resp_match.group(1).strip()
-                    if date_match:
-                        date_str = date_match.group(1)
-                        current_task['due_date_str'] = date_str
-                        try:
-                            # Парсим дату (формат ДД.ММ.ГГГГ)
-                            current_task['due_date'] = datetime.strptime(date_str, '%d.%m.%Y').date()
-                        except ValueError as e:
-                            print(f"⚠️ Ошибка парсинга даты {date_str}: {e}")
-                    
-                    # Добавляем эту строку к описанию
-                    current_description.append(line)
-                    current_task['description_parts'].append(line)
-                else:
-                    # Продолжение описания задачи
-                    current_description.append(line)
-                    current_task['description_parts'].append(line)
+                # Добавляем строку к описанию (в любом случае)
+                current_description.append(line)
+                current_task['description_parts'].append(line)
+                
+                # ========== ИЩЕМ ДАТУ ==========
+                # Ищем дату в формате ДД.ММ.ГГГГ после слова "Срок"
+                date_match = re.search(r'Срок\s*[—–-]?\s*(\d{2}\.\d{2}\.\d{4})', line)
+                if date_match:
+                    date_str = date_match.group(1).strip()
+                    current_task['due_date_str'] = date_str
+                    try:
+                        current_task['due_date'] = datetime.strptime(date_str, '%d.%m.%Y').date()
+                    except ValueError as e:
+                        print(f"⚠️ Ошибка парсинга даты {date_str}: {e}")
+                
+                # ========== ИЩЕМ ОТВЕТСТВЕННОГО ==========
+                # Ищем "Отв.:" и всё после до конца строки или до "Срок"
+                resp_match = re.search(r'Отв\.:\s*([^С]+?)(?:\s+Срок|$)', line)
+                if not resp_match:
+                    # Если не нашли с "Срок", ищем просто до конца строки
+                    resp_match = re.search(r'Отв\.:\s*([^\n]+)', line)
+                
+                if resp_match:
+                    responsible = resp_match.group(1).strip()
+                    # Очищаем от лишних символов
+                    responsible = re.sub(r'\s+', ' ', responsible)
+                    current_task['responsible'] = responsible
         
         # Сохраняем последнюю задачу
         if current_task:
@@ -103,7 +101,11 @@ class TaskParser:
     
     def _save_current_task(self, task: Dict, description_lines: List[str]):
         """Формирует полное описание задачи"""
-        task['full_description'] = ' '.join(description_lines)
+        # Объединяем все строки в одно описание
+        full_desc = ' '.join(description_lines)
+        # Очищаем от лишних пробелов
+        full_desc = re.sub(r'\s+', ' ', full_desc)
+        task['full_description'] = full_desc
     
     def print_tasks(self):
         """Выводит найденные задачи в читаемом виде"""
@@ -116,9 +118,9 @@ class TaskParser:
         
         for task in self.tasks:
             print(f"Задача #{task['number']}")
-            print(f"Описание: {task['full_description'][:100]}...")  # Первые 100 символов
-            print(f"Ответственный: {task['responsible']}")
-            print(f"Срок: {task['due_date_str']}")
+            print(f"📝 Описание: {task['full_description'][:100]}...")
+            print(f"👤 Ответственный: {task['responsible'] or '❌ НЕ НАЙДЕН'}")
+            print(f"📅 Срок: {task['due_date_str'] or '❌ НЕ НАЙДЕН'}")
             print("-" * 40)
     
     def to_dataframe(self):
@@ -131,16 +133,30 @@ class TaskParser:
                 '№': task['number'],
                 'Описание': task['full_description'],
                 'Ответственный': task['responsible'],
-                'Срок': task['due_date_str'],
+                'Срок': task['due_date_str']
             })
         
         df = pd.DataFrame(data)
         return df
 
+
 # Тестирование
 if __name__ == "__main__":
-    # Путь к PDF файлу
-    pdf_file = "data/tasks.pdf"
+    import sys
+    import os
+    
+    # Путь к PDF файлу (можно передать как аргумент)
+    if len(sys.argv) > 1:
+        pdf_file = sys.argv[1]
+    else:
+        pdf_file = "data/tasks.pdf"
+    
+    if not os.path.exists(pdf_file):
+        print(f"❌ Файл не найден: {pdf_file}")
+        sys.exit(1)
+    
+    print(f"\n📄 Тестирование парсера на файле: {pdf_file}")
+    print("=" * 60)
     
     # Создаем парсер
     parser = TaskParser(pdf_file)
@@ -155,7 +171,10 @@ if __name__ == "__main__":
         # Выводим результат
         parser.print_tasks()
         
-        # Показываем DataFrame
-        df = parser.to_dataframe()
-        print("\n📊 DataFrame:")
-        print(df)
+        # Показываем статистику
+        print("\n📊 Статистика:")
+        print(f"   Всего задач: {len(tasks)}")
+        print(f"   Задач с ответственным: {sum(1 for t in tasks if t['responsible'])}")
+        print(f"   Задач с датой: {sum(1 for t in tasks if t['due_date_str'])}")
+    else:
+        print("❌ Не удалось извлечь текст из PDF")
