@@ -48,6 +48,17 @@ def get_summarizer():
 async def root():
     return {"message": "PDF Task Parser API", "status": "running"}
 
+from fastapi.responses import HTMLResponse
+import os
+
+@app.get("/app")
+async def get_app():
+    html_path = os.path.join("web", "index.html")
+    if os.path.exists(html_path):
+        with open(html_path, "r", encoding="utf-8") as f:
+            return HTMLResponse(content=f.read())
+    return HTMLResponse(content="<h1>index.html not found</h1>", status_code=404)
+
 
 @app.post("/parse-batch")
 async def parse_batch(request: Request):

@@ -177,13 +177,13 @@ processBtn.addEventListener('click', async function() {
     formData.append('calendar_id', calendarId.value);
     
     // ===== ПРОВЕРКА: что отправляем =====
-    console.log('📤 Отправляю FormData:');
+    console.log('Отправляю FormData:');
     for (let pair of formData.entries()) {
         console.log(pair[0], '=', pair[1]);
     }
     // ===================================
     
-    console.log('📤 Отправляю:', {
+    console.log('Отправляю:', {
         files: selectedFiles.length,
         export_to_calendar: exportCalendar.checked,
         calendar_id: calendarId.value
@@ -195,14 +195,14 @@ processBtn.addEventListener('click', async function() {
             body: formData
         });
         
-        console.log('📥 Ответ получен, статус:', response.status);
+        console.log('Ответ получен, статус:', response.status);
         
         if (!response.ok) {
             throw new Error('HTTP ошибка: ' + response.status);
         }
         
         const data = await response.json();
-        console.log('📦 Данные:', data);
+        console.log('Данные:', data);
         
         if (data.success) {
             if (data.excel_base64) {
@@ -212,16 +212,16 @@ processBtn.addEventListener('click', async function() {
             displayResults(data.tasks, data.statistics, data.files);
             
             if (data.calendar_export === 'success') {
-                alert('✅ Задачи добавлены в Google Calendar');
+                alert('Задачи добавлены в Google Calendar');
             } else if (data.calendar_export) {
-                alert('❌ Ошибка Calendar: ' + data.calendar_export);
+                alert('Ошибка Calendar: ' + data.calendar_export);
             }
         } else {
             alert('Ошибка: ' + (data.error || 'Неизвестная ошибка'));
         }
         
     } catch (err) {
-        console.error('❌ Ошибка:', err);
+        console.error('Ошибка:', err);
         alert('Ошибка соединения: ' + err.message + '\n\nПроверь, что сервер запущен (python3 backend.py)');
     } finally {
         processBtn.disabled = false;
