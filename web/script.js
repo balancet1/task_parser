@@ -190,7 +190,7 @@ processBtn.addEventListener('click', async function() {
     });
     
     try {
-        const response = await fetch('http://localhost:8000/parse-batch', {
+        const response = await fetch('/parse-batch', {
             method: 'POST',
             body: formData
         });

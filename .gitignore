@@ -11,6 +11,8 @@ output/
 *.pdf
 *.docx
 
+temp_uploads/
+
 .idea/
 .DS_Store
 .gitignore
