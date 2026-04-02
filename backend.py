@@ -60,6 +60,16 @@ async def get_app():
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>index.html not found</h1>", status_code=404)
 
+@app.get("/style.css")
+async def get_css():
+    with open("web/style.css", "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read(), media_type="text/css")
+
+@app.get("/js/script.js")
+async def get_js():
+    with open("web/js/script.js", "r", encoding="utf-8") as f:
+        return HTMLResponse(content=f.read(), media_type="application/javascript")
+
 
 @app.post("/parse-batch")
 async def parse_batch(request: Request):
