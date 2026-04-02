@@ -67,7 +67,7 @@ async def get_css():
 
 @app.get("/script.js")
 async def get_js():
-    with open("web/js/script.js", "r", encoding="utf-8") as f:
+    with open("web/script.js", "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read(), media_type="application/javascript")
     
     @app.get("/web/icons/{icon_name}")
