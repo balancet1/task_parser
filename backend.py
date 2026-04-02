@@ -69,6 +69,22 @@ async def get_css():
 async def get_js():
     with open("web/js/script.js", "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read(), media_type="application/javascript")
+    
+    @app.get("/web/icons/{icon_name}")
+    async def get_icon(icon_name: str):
+        icon_path = os.path.join("web", "icons", icon_name)
+        if os.path.exists(icon_path):
+            with open(icon_path, "rb") as f:
+                if icon_name.endswith('.svg'):
+                    media_type = "image/svg+xml"
+                elif icon_name.endswith('.png'):
+                    media_type = "image/png"
+                elif icon_name.endswith('.ico'):
+                    media_type = "image/x-icon"
+                else:
+                    media_type = "application/octet-stream"
+                return HTMLResponse(content=f.read(), media_type=media_type)
+        return HTMLResponse(status_code=404)
 
 
 @app.post("/parse-batch")
