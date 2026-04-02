@@ -1,62 +1,42 @@
 import pandas as pd
 from openpyxl import Workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
-from openpyxl.utils.dataframe import dataframe_to_rows
 from datetime import datetime
 import os
+from io import BytesIO
 
 class ExcelExporter:
-    def __init__(self, df):
-        """
-        Инициализация экспортера с DataFrame
-        """
-        self.df = df
-        self.wb = None
-        self.ws = None
+    def __init__(self, filename=None):
+        self.filename = filename
+        self.base_filename = "output/tasks.xlsx"
+        
+        if filename and os.path.exists(filename):
+            from openpyxl import load_workbook
+            self.wb = load_workbook(filename)
+        else:
+            self.wb = Workbook()
+            if "Sheet" in self.wb.sheetnames:
+                self.wb.remove(self.wb["Sheet"])
     
-    def export(self, filename="output/tasks.xlsx", sheet_name="Задачи"):
-        """
-        Экспорт DataFrame в Excel с форматированием
-        """
-        # Создаем директорию, если её нет
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
+    def add_sheet(self, df, sheet_name: str):
+        if sheet_name in self.wb.sheetnames:
+            self.wb.remove(self.wb[sheet_name])
         
-        # Создаем Excel файл с форматированием через openpyxl
-        self.wb = Workbook()
-        self.ws = self.wb.active
-        self.ws.title = sheet_name
+        ws = self.wb.create_sheet(title=sheet_name)
         
-        # Записываем данные
-        self._write_data()
-        
-        # Применяем форматирование
-        self._apply_formatting()
-        
-        # Сохраняем файл
-        self.wb.save(filename)
-        print(f"✅ Excel файл сохранен: {filename}")
-        return filename
-    
-    def _write_data(self):
-        """Запись данных из DataFrame в лист"""
-        # Записываем заголовки
-        headers = list(self.df.columns)
+        headers = list(df.columns)
         for col_idx, header in enumerate(headers, 1):
-            self.ws.cell(row=1, column=col_idx, value=header)
+            ws.cell(row=1, column=col_idx, value=header)
         
-        # Записываем данные
-        for row_idx, row in self.df.iterrows():
+        for row_idx, row in df.iterrows():
             for col_idx, value in enumerate(row, 1):
-                cell = self.ws.cell(row=row_idx + 2, column=col_idx, value=value)
-                
-                # Если это дата - форматируем
+                cell = ws.cell(row=row_idx + 2, column=col_idx, value=value)
                 if isinstance(value, (datetime, pd.Timestamp)):
                     cell.number_format = 'DD.MM.YYYY'
-    
-    def _apply_formatting(self):
-        """Применяет красивое форматирование к таблице"""
         
-        # Стили
+        self._apply_formatting(ws, len(df.columns), len(df))
+    
+    def _apply_formatting(self, ws, num_columns, num_rows):
         header_font = Font(name='Arial', size=12, bold=True, color='FFFFFF')
         header_fill = PatternFill(start_color='366092', end_color='366092', fill_type='solid')
         header_alignment = Alignment(horizontal='center', vertical='center', wrap_text=True)
@@ -71,72 +51,55 @@ class ExcelExporter:
             bottom=Side(style='thin')
         )
         
-        # Форматируем заголовки
-        for col in range(1, len(self.df.columns) + 1):
-            cell = self.ws.cell(row=1, column=col)
+        for col in range(1, num_columns + 1):
+            cell = ws.cell(row=1, column=col)
             cell.font = header_font
             cell.fill = header_fill
             cell.alignment = header_alignment
             cell.border = border
         
-        # Форматируем данные
-        for row in range(2, self.ws.max_row + 1):
-            for col in range(1, len(self.df.columns) + 1):
-                cell = self.ws.cell(row=row, column=col)
+        for row in range(2, num_rows + 2):
+            for col in range(1, num_columns + 1):
+                cell = ws.cell(row=row, column=col)
                 cell.border = border
                 
-                # Для колонки с датой - центрирование
-                if self.df.columns[col-1] in ['Срок', 'Дата']:
+                col_letter = ws.cell(row=1, column=col).value
+                if col_letter in ['Срок', 'Дата']:
                     cell.alignment = date_alignment
                 else:
                     cell.alignment = cell_alignment
         
-        # Автоподбор ширины колонок
-        for col in self.ws.columns:
+        for col in ws.columns:
             max_length = 0
             col_letter = col[0].column_letter
-            
             for cell in col:
                 try:
                     if len(str(cell.value)) > max_length:
                         max_length = len(str(cell.value))
                 except:
                     pass
-            
-            # Ограничиваем максимальную ширину
             adjusted_width = min(max_length + 2, 80)
-            self.ws.column_dimensions[col_letter].width = adjusted_width
+            ws.column_dimensions[col_letter].width = adjusted_width
         
-        # Фиксируем заголовок
-        self.ws.freeze_panes = 'A2'
+        ws.freeze_panes = 'A2'
     
-    def export_multiple_sheets(self, filename="output/tasks_report.xlsx", extra_data=None):
-        """
-        Экспорт в несколько листов
-        """
+    def save(self, filename=None):
+        if filename is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"output/tasks_{timestamp}.xlsx"
+        
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         
-        with pd.ExcelWriter(filename, engine='openpyxl') as writer:
-            # Основной лист с задачами
-            self.df.to_excel(writer, sheet_name='Все задачи', index=False)
-            
-            # Статистика по ответственным
-            if 'Ответственный' in self.df.columns:
-                stats = self.df['Ответственный'].value_counts().reset_index()
-                stats.columns = ['Ответственный', 'Количество задач']
-                stats.to_excel(writer, sheet_name='Статистика', index=False)
-            
-            # Задачи по датам (если есть колонка с датой)
-            if 'Срок' in self.df.columns:
-                # Простая сортировка
-                self.df.sort_values('Срок').to_excel(
-                    writer, sheet_name='По срокам', index=False
-                )
-            
-            # Дополнительные данные, если переданы
-            if extra_data:
-                for sheet_name, data in extra_data.items():
-                    if isinstance(data, pd.DataFrame):
-                        data.to_excel(writer, sheet_name=sheet_name, index=False)
+        for sheet in self.wb.worksheets:
+            for row in sheet.iter_rows():
+                for cell in row:
+                    if cell.value is not None:
+                        _ = cell.value
         
-        print(f"✅ Многостраничный отчет сохранен: {filename}")
+        self.wb.save(filename)
+        print(f"✅ Excel файл сохранен: {filename}")
+        return filename
+    
+    def save_to_buffer(self, buffer):
+        self.wb.save(buffer)
+        return buffer

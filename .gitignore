@@ -9,6 +9,7 @@ output/
 *.xls
 *.csv
 *.pdf
+*.docx
 
 .idea/
 .DS_Store

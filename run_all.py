@@ -1,63 +1,78 @@
-# ОБРАБОТКА ВСЕХ PDF-файлов в папке /data
-
 import os
 import glob
+import pandas as pd
+from datetime import datetime
 from src.main_with_calendar import TaskProcessor
+from src.excel_exporter import ExcelExporter
 
-def process_all_pdfs():
-    # Настройки (вставь свои данные)
-    calendar_id = "nikolaevsub@gmail.com"  # твой ID календаря  
-    sheets_url = "https://docs.google.com/spreadsheets/d/.../edit"  # твоя ссылка
+def process_all_documents():
+    # Настройки
+    calendar_id = "cd807be5e82c589d7a3e08ec8dbc93e55578d58603238b6754d2ce4162e12eef@group.calendar.google.com"
+    sheets_url = None  # или твоя ссылка
     
-    # Найти все PDF файлы в папке data
-    pdf_files = glob.glob("data/*.pdf")
+    # Найти все файлы
+    all_files = []
+    for ext in ['*.pdf', '*.docx', '*.doc']:
+        all_files.extend(glob.glob(f"data/{ext}"))
+    all_files.sort()
     
-    if not pdf_files:
-        print("❌ В папке data/ нет PDF файлов")
+    if not all_files:
+        print("❌ В папке data/ нет файлов")
         return
     
-    print(f"📁 Найдено PDF файлов: {len(pdf_files)}")
-    print("=" * 60)
+    print(f"\n{'='*60}")
+    print(f"📁 Найдено файлов: {len(all_files)}")
+    for f in all_files:
+        print(f"   📄 {os.path.basename(f)}")
+    print(f"{'='*60}\n")
     
-    # Создаём общую таблицу для результатов
-    all_results = []
+    # Единый Excel-файл
+    excel_filename = "output/tasks.xlsx"
+    exporter = ExcelExporter(excel_filename)
     
-    for i, pdf_file in enumerate(pdf_files, 1):
-        print(f"\n📄 Файл {i}/{len(pdf_files)}: {os.path.basename(pdf_file)}")
-        print("-" * 40)
+    # Список для сводной таблицы
+    all_tasks_data = []
+    
+    for i, file_path in enumerate(all_files, 1):
+        file_name = os.path.basename(file_path)
+        print(f"\n{'='*60}")
+        print(f"📄 Файл {i}/{len(all_files)}: {file_name}")
+        print(f"{'='*60}")
         
-        # Обработать каждый файл
-        processor = TaskProcessor(pdf_file, use_summarizer=True)
+        # Обрабатываем файл
+        processor = TaskProcessor(file_path, use_summarizer=True)
         
         if processor.process():
-            # Сохраняем в отдельный Excel файл
-            excel_name = f"output/tasks_{i}_{os.path.basename(pdf_file).replace('.pdf', '')}.xlsx"
-            processor.save_to_excel(excel_name)
+            # Генерируем имя листа
+            sheet_name = os.path.splitext(file_name)[0]
+            sheet_name = sheet_name.replace(' ', '_')[:31]
             
-            # Добавляем в общий список для сводки
-            all_results.append({
-                'file': os.path.basename(pdf_file),
-                'count': len(processor.tasks)
-            })
+            # Добавляем лист в общий Excel-файл
+            exporter.add_sheet(processor.df, sheet_name)
             
-            # Экспорт в Google (опционально)
+            # Добавляем данные в сводную таблицу
+            df_with_source = processor.df.copy()
+            df_with_source['Источник'] = file_name
+            all_tasks_data.append(df_with_source)
+            
+            # Google интеграция
             if sheets_url:
-                processor.save_to_google_sheets(sheets_url, sheet_name=f"Файл_{i}")
+                processor.save_to_google_sheets(sheets_url, sheet_name=sheet_name)
             if calendar_id:
                 processor.save_to_google_calendar(calendar_id)
-        else:
-            print(f"⚠️ Ошибка обработки {pdf_file}")
     
-    # Итоговая статистика
-    print("\n" + "=" * 60)
-    print("📊 ИТОГОВАЯ СТАТИСТИКА")
-    print("=" * 60)
-    total = 0
-    for r in all_results:
-        print(f"📄 {r['file']}: {r['count']} задач")
-        total += r['count']
-    print(f"\n✅ Всего обработано файлов: {len(all_results)}")
-    print(f"✅ Всего найдено задач: {total}")
+    # Создаём сводную таблицу
+    if all_tasks_data:
+        all_tasks_df = pd.concat(all_tasks_data, ignore_index=True)
+        cols = ['Источник'] + [c for c in all_tasks_df.columns if c != 'Источник']
+        all_tasks_df = all_tasks_df[cols]
+        exporter.add_sheet(all_tasks_df, "Все задачи")
+        print(f"\n📊 Создан сводный лист 'Все задачи' ({len(all_tasks_df)} задач)")
+    
+    # Сохраняем Excel-файл
+    exporter.save()
+    print(f"\n✅ Все листы сохранены в {excel_filename}")
+    print(f"   📑 Листы: {', '.join(exporter.wb.sheetnames)}")
 
 if __name__ == "__main__":
-    process_all_pdfs()
+    process_all_documents()

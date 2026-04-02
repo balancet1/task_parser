@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Парсер задач</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100..900&display=swap" rel="stylesheet">
+    <link rel="shortcut icon" href="/web/icons/favicon.svg" type="image/x-icon">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="title">
+                <img src="/web/icons/titleIcon.svg" alt="">
+                <h1>Твой парсер</h1>
+            </div>
+            <p>Загрузи PDF или Word документ, чтобы извлечь все задачи</p>
+        </header>
+
+        <main>
+            <div id="dropZone" class="upload-area">
+                <div class="upload-item">
+                    <img src="/web/icons/upload.svg" alt="">
+                    <div class="upload-text">Перетащи сюда файлы</div>
+                    <div class="upload-advice">или кликни для выбора</div>
+                </div>
+            </div>
+
+            <input type="file" id="fileInput" style="display:none" multiple accept=".pdf,.docx,.doc">
+
+            <div id="selectedFiles" class="selected-files" style="display:none">
+                <strong>Выбрано файлов:</strong> <span id="filesCount">0</span>
+                <div id="filesList" class="files-list"></div>
+            </div>
+
+            <div class="upload-choice">
+                <div class="option-card">
+                    <div class="option-choice">
+                        <img src="/web/icons/sheetsLogo-svgrepo-com.svg" alt="">
+                        <h3>Google Sheets</h3>
+                    </div>
+                    <label>
+                        <input type="checkbox" id="exportSheets"> Экспортировать
+                    </label>
+                    <input type="text" id="sheetsUrl" class="option-input" placeholder="URL таблицы" disabled>
+                </div>
+                <div class="option-card">
+                    <div class="option-choice">
+                        <img src="/web/icons/calendarLogo.svg" alt="">
+                        <h3>Google Calendar</h3>
+                    </div>
+                    <label>
+                        <input type="checkbox" id="exportCalendar"> Экспортировать
+                    </label>
+                    <input type="text" id="calendarId" class="option-input" placeholder="ID календаря" disabled>
+                </div>
+            </div>
+
+            <button id="processBtn" class="btn" disabled>Обработать документы</button>
+        </main>
+
+        <section>
+            <div id="loader" class="loader"></div>
+
+            <div id="results" class="results">
+                <h2>Результаты обработки</h2>
+                <div id="stats" class="stats"></div>
+                <div class="table-wrapper">
+                    <table id="tasksTable">
+                        <thead>
+                            <tr>
+                                <th>№</th>
+                                <th>Краткое описание</th>
+                                <th>Описание</th>
+                                <th>Ответственный</th>
+                                <th>Срок</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasksBody"></tbody>
+                    </table>
+                </div>
+                <button id="downloadBtn" class="download-btn" style="display:none">Скачать Excel</button>
+            </div>
+        </section>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
