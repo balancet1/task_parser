@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 import tempfile
 import os
 import sys
@@ -48,8 +48,9 @@ def get_summarizer():
 async def root():
     return {"message": "PDF Task Parser API", "status": "running"}
 
-from fastapi.responses import HTMLResponse
-import os
+@app.get("/test")
+async def test():
+    return {"message": "Server is working!"}
 
 @app.get("/app")
 async def get_app():
