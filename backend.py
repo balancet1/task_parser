@@ -48,10 +48,6 @@ def get_summarizer():
 async def root():
     return {"message": "PDF Task Parser API", "status": "running"}
 
-@app.get("/test")
-async def test():
-    return {"message": "Server is working!"}
-
 @app.get("/app")
 async def get_app():
     html_path = os.path.join("web", "index.html")
@@ -70,13 +66,13 @@ async def get_js():
     with open("web/script.js", "r", encoding="utf-8") as f:
         return HTMLResponse(content=f.read(), media_type="application/javascript")
     
-    @app.get("/web/icons/{icon_name}")
-    async def get_icon(icon_name: str):
-        icon_path = os.path.join("web", "icons", icon_name)
-        if os.path.exists(icon_path):
-            with open(icon_path, "rb") as f:
-                return HTMLResponse(content=f.read(), media_type="image/svg+xml")
-        return HTMLResponse(status_code=404)
+@app.get("/web/icons/{icon_name}")
+async def get_icon(icon_name: str):
+    icon_path = os.path.join("web", "icons", icon_name)
+    if os.path.exists(icon_path):
+        with open(icon_path, "rb") as f:
+            return HTMLResponse(content=f.read(), media_type="image/svg+xml")
+    return HTMLResponse(status_code=404)
 
 
 @app.post("/parse-batch")
