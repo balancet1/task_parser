@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.staticfiles import StaticFiles
 import tempfile
 import os
 import sys
@@ -8,6 +9,7 @@ import base64
 import uvicorn
 import pandas as pd
 from io import BytesIO
+import json
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -19,6 +21,9 @@ from src.google_calendar import GoogleCalendarExporter
 
 app = FastAPI(title="PDF Task Parser API")
 
+# Подключаем статику
+app.mount("/web", StaticFiles(directory="web"), name="web")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -28,6 +33,14 @@ app.add_middleware(
 
 TEMP_DIR = "temp_uploads"
 os.makedirs(TEMP_DIR, exist_ok=True)
+
+# Загружаем Google-ключ из секретов Hugging Face
+GOOGLE_CREDS = os.environ.get("GOOGLE_CREDENTIALS")
+if GOOGLE_CREDS:
+    os.makedirs("credentials", exist_ok=True)
+    with open("credentials/google-credentials.json", "w") as f:
+        f.write(GOOGLE_CREDS)
+    print("✅ Google-ключ загружен из секретов")
 
 summarizer = None
 
@@ -48,6 +61,7 @@ def get_summarizer():
 async def root():
     return {"message": "PDF Task Parser API", "status": "running"}
 
+
 @app.get("/app")
 async def get_app():
     html_path = os.path.join("web", "index.html")
@@ -55,24 +69,6 @@ async def get_app():
         with open(html_path, "r", encoding="utf-8") as f:
             return HTMLResponse(content=f.read())
     return HTMLResponse(content="<h1>index.html not found</h1>", status_code=404)
-
-@app.get("/style.css")
-async def get_css():
-    with open("web/style.css", "r", encoding="utf-8") as f:
-        return HTMLResponse(content=f.read(), media_type="text/css")
-
-@app.get("/script.js")
-async def get_js():
-    with open("web/script.js", "r", encoding="utf-8") as f:
-        return HTMLResponse(content=f.read(), media_type="application/javascript")
-    
-@app.get("/web/icons/{icon_name}")
-async def get_icon(icon_name: str):
-    icon_path = os.path.join("web", "icons", icon_name)
-    if os.path.exists(icon_path):
-        with open(icon_path, "rb") as f:
-            return HTMLResponse(content=f.read(), media_type="image/svg+xml")
-    return HTMLResponse(status_code=404)
 
 
 @app.post("/parse-batch")
@@ -225,12 +221,27 @@ async def parse_batch(request: Request):
     excel_bytes = excel_buffer.getvalue()
     excel_base64 = base64.b64encode(excel_bytes).decode('ascii')
     
+    # Общая статистика
     total_stats = {
         "total": len(all_tasks_data),
         "with_responsible": sum(1 for t in all_tasks_data if t.get('responsible')),
         "with_date": sum(1 for t in all_tasks_data if t.get('due_date_str')),
         "files_count": len(all_results)
     }
+    
+    # Собираем уникальных ответственных для фильтрации на фронтенде
+    responsibles = {}
+    for task in all_tasks_data:
+        resp = task.get('responsible')
+        if resp and resp.strip():
+            responsibles[resp] = responsibles.get(resp, 0) + 1
+    
+    # Сортируем по количеству задач (от большего к меньшему)
+    responsibles_list = sorted(
+        [{"name": name, "count": count} for name, count in responsibles.items()],
+        key=lambda x: x["count"],
+        reverse=True
+    )
     
     return {
         "success": True,
@@ -239,7 +250,8 @@ async def parse_batch(request: Request):
         "excel_base64": excel_base64,
         "files": [{"name": r["filename"], "count": r["count"]} for r in all_results],
         "sheets_export": sheets_export_status,
-        "calendar_export": calendar_export_status
+        "calendar_export": calendar_export_status,
+        "responsibles": responsibles_list
     }
 
 

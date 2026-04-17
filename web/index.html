@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@100..900&display=swap" rel="stylesheet">
     <link rel="shortcut icon" href="/web/icons/favicon.svg" type="image/x-icon">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="/web/style.css">
 </head>
 <body>
     <div class="container">
@@ -29,9 +29,9 @@
                 </div>
             </div>
 
-            <input type="file" id="fileInput" style="display:none" multiple accept=".pdf,.docx,.doc">
+            <input type="file" id="fileInput" class="hidden-input" multiple accept=".pdf,.docx,.doc">
 
-            <div id="selectedFiles" class="selected-files" style="display:none">
+            <div id="selectedFiles" class="selected-files">
                 <strong>Выбрано файлов:</strong> <span id="filesCount">0</span>
                 <div id="filesList" class="files-list"></div>
             </div>
@@ -39,20 +39,18 @@
             <div class="upload-choice">
                 <div class="option-card">
                     <div class="option-choice">
-                        <img src="/web/icons/sheetsLogo-svgrepo-com.svg" alt="">
                         <h3>Google Sheets</h3>
                     </div>
-                    <label>
+                    <label class="checkbox-label">
                         <input type="checkbox" id="exportSheets"> Экспортировать
                     </label>
                     <input type="text" id="sheetsUrl" class="option-input" placeholder="URL таблицы" disabled>
                 </div>
                 <div class="option-card">
                     <div class="option-choice">
-                        <img src="/web/icons/calendarLogo.svg" alt="">
                         <h3>Google Calendar</h3>
                     </div>
-                    <label>
+                    <label class="checkbox-label">
                         <input type="checkbox" id="exportCalendar"> Экспортировать
                     </label>
                     <input type="text" id="calendarId" class="option-input" placeholder="ID календаря" disabled>
@@ -64,6 +62,22 @@
 
         <section>
             <div id="loader" class="loader"></div>
+
+            <div id="filterPanel" class="filter-panel">
+                <div class="filter-header" id="filterHeader">
+                    <div class="filter-title">
+                         <p>ФИЛЬТР ПО ОТВЕТСТВЕННЫМ</p>
+                        <span id="filterBadge" class="filter-badge">0</span>
+                    </div>
+                    <div class="filter-header-actions">
+                        <button id="clearFiltersBtn" class="clear-btn">Сбросить</button>
+                        <span id="filterArrow" class="filter-arrow">▼</span>
+                    </div>
+                </div>
+                <div id="filterContent" class="filter-content">
+                    <div id="filterOptions" class="filter-options"></div>
+                </div>
+            </div>
 
             <div id="results" class="results">
                 <h2>Результаты обработки</h2>
@@ -82,11 +96,11 @@
                         <tbody id="tasksBody"></tbody>
                     </table>
                 </div>
-                <button id="downloadBtn" class="download-btn" style="display:none">Скачать Excel</button>
+                <button id="downloadBtn" class="download-btn">Скачать Excel</button>
             </div>
         </section>
     </div>
 
-    <script src="script.js"></script>
+    <script src="/web/script.js"></script>
 </body>
 </html>
